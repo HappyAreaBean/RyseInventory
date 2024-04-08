@@ -35,10 +35,10 @@ publishing {
             version = "${project.version}"
 
             pom {
-                name = "RyseInventory"
+                name.set("RyseInventory")
+                description.set("Inventory System")
+                url.set("https://github.com/Rysefoxx/RyseInventory")
                 packaging = "jar"
-                description = "Inventory System"
-                url = "https://github.com/Rysefoxx/RyseInventory"
             }
             project.extensions.configure<com.github.jengelman.gradle.plugins.shadow.ShadowExtension>() {
                 component(this@create)
@@ -47,11 +47,11 @@ publishing {
     }
     repositories {
         maven {
-            name = "nexus"
-            url = uri("https://repo.networkmanager.xyz/repository/maven-networkmanager/")
+            name = "frsRepository"
+            url = uri("https://repo.fantasyrealms.net/other-libraries")
             credentials {
-                username = project.property("NEXUS_USERNAME").toString()
-                password = project.property("NEXUS_PASSWORD").toString()
+                username = findProperty("frsRepositoryUsername").toString()
+                password = findProperty("frsRepositoryPassword").toString()
             }
         }
     }
