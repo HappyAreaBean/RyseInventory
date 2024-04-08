@@ -54,6 +54,14 @@ publishing {
                 password = findProperty("frsRepositoryPassword").toString()
             }
         }
+        maven {
+            name = "frsRepositorySnapShots"
+            url = uri("https://repo.fantasyrealms.net/other-snapshots")
+            credentials {
+                username = findProperty("frsRepositoryUsername").toString()
+                password = findProperty("frsRepositoryPassword").toString()
+            }
+        }
     }
 }
 
