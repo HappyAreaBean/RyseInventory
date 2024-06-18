@@ -23,29 +23,40 @@
  *
  */
 
-package io.github.rysefoxx.inventory.plugin.util;
+package io.github.rysefoxx.inventory.v1_21;
 
-import com.cryptomorin.xseries.reflection.XReflection;
-import org.jetbrains.annotations.Contract;
+
+import io.github.rysefoxx.inventory.api.IntelligentItemColorWrapper;
+import net.md_5.bungee.api.ChatColor;
+
 
 /**
  * @author Rysefoxx | Rysefoxx#6772
- * @since 4/22/2022
+ * @since 6/10/2022
  */
-public class VersionUtils {
+public class ColorHandler implements IntelligentItemColorWrapper<ChatColor> {
 
-    @Contract(pure = true)
-    private VersionUtils() {
+    private String toHex(int value) {
+        StringBuilder hex = new StringBuilder(Integer.toHexString(value));
+
+        while (hex.length() < 2) {
+            hex.append("0");
+        }
+        return hex.toString();
     }
 
-    @Contract(pure = true)
-    public static int getSubVersion() {
-        return XReflection.MINOR_NUMBER;
-    }
+    @Override
+    public ChatColor getColor(String input, int[] rgb) {
+        if (input == null) {
+            int red = rgb[0];
+            int green = rgb[1];
+            int blue = rgb[2];
 
-    @Contract(pure = true)
-    public static boolean isBelowAnd13() {
-        return getSubVersion() <= 13;
-    }
+            String hex = "#" + toHex(red) + toHex(green) + toHex(blue);
 
+            return ChatColor.of(hex);
+        }
+
+        return ChatColor.of(input);
+    }
 }

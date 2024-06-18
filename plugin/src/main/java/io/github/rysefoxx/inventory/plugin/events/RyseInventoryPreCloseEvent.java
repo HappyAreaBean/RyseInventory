@@ -85,7 +85,7 @@ public class RyseInventoryPreCloseEvent extends PlayerEvent implements Cancellab
     }
 
     @Override
-    public HandlerList getHandlers() {
+    public @NotNull HandlerList getHandlers() {
         return HANDLERS_LIST;
     }
 }

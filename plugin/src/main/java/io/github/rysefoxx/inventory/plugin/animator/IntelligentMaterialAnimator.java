@@ -32,15 +32,14 @@ import io.github.rysefoxx.inventory.plugin.enums.TimeSetting;
 import io.github.rysefoxx.inventory.plugin.pagination.RyseInventory;
 import io.github.rysefoxx.inventory.plugin.util.StringConstants;
 import io.github.rysefoxx.inventory.plugin.util.TimeUtils;
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import space.arim.morepaperlib.scheduling.ScheduledTask;
 
 import javax.annotation.Nonnegative;
 import java.util.ArrayList;
@@ -59,7 +58,7 @@ public class IntelligentMaterialAnimator {
     private int period = 20;
     private int delay = 0;
     private int slot = -1;
-    private BukkitTask task;
+    private ScheduledTask task;
     private boolean loop;
     private RyseInventory inventory;
     private IntelligentItem intelligentItem;
@@ -86,7 +85,7 @@ public class IntelligentMaterialAnimator {
      * @return true if the animation was stopped.
      */
     public boolean stop() {
-        if (this.task == null || !Bukkit.getScheduler().isQueued(this.task.getTaskId()))
+        if (this.task == null || this.task.getExecutionState() != ScheduledTask.ExecutionState.IDLE)
             return false;
 
         this.task.cancel();
@@ -99,7 +98,70 @@ public class IntelligentMaterialAnimator {
     private void animateItem() {
         int finalLength = getFrameLength();
 
-        this.task = Bukkit.getScheduler().runTaskTimer(plugin, new Runnable() {
+        this.task = inventory.getManager().getMorePaperLib().scheduling().globalRegionalScheduler()
+                .runAtFixedRate(new Runnable() {
+                    final List<String> framesCopy = frames;
+                    final ItemStack itemStack = new ItemStack(intelligentItem.getItemStack());
+                    int materialState = 0;
+                    int subStringIndex = 0;
+                    int currentFrameIndex = 0;
+                    Material currentMaterial;
+
+                    @Override
+                    public void run() {
+                        char[] currentFrames = framesCopy.get(this.currentFrameIndex).toCharArray();
+
+                        resetWhenFrameFinished(currentFrames);
+
+                        if (cancelIfListIsEmpty()) return;
+
+                        currentFrames = updateFramesWhenRequired(currentFrames);
+
+                        char singleFrame = currentFrames[this.materialState];
+
+                        this.currentMaterial = frameMaterial.get(singleFrame);
+                        this.materialState++;
+                        this.subStringIndex++;
+
+                        this.itemStack.setType(this.currentMaterial);
+                        contents.update(slot, this.itemStack);
+                    }
+
+                    private char @NotNull [] updateFramesWhenRequired(char @NotNull [] currentFrames) {
+                        if (this.materialState < currentFrames.length) return currentFrames;
+
+                        this.materialState = 0;
+                        if (this.framesCopy.size() > 1 && (this.currentFrameIndex + 1 != this.framesCopy.size())) {
+                            this.currentFrameIndex++;
+                            currentFrames = this.framesCopy.get(this.currentFrameIndex).toCharArray();
+                        }
+                        return currentFrames;
+                    }
+
+                    private boolean cancelIfListIsEmpty() {
+                        if (this.framesCopy.isEmpty()) {
+                            inventory.removeMaterialAnimator(IntelligentMaterialAnimator.this);
+                            return true;
+                        }
+                        return false;
+                    }
+
+                    private void resetWhenFrameFinished(char[] currentFrames) {
+                        if (this.subStringIndex < finalLength) return;
+
+                        if (!loop)
+                            this.framesCopy.remove(0);
+                        this.materialState = 0;
+                        this.subStringIndex = 0;
+
+                        if (!this.framesCopy.isEmpty())
+                            this.currentMaterial = frameMaterial.get(currentFrames[this.materialState]);
+
+                        if (this.currentFrameIndex + 1 >= this.framesCopy.size())
+                            this.currentFrameIndex = 0;
+                    }
+                }, this.delay, this.period);
+        /*this.task = Bukkit.getScheduler().runTaskTimer(plugin, new Runnable() {
             final List<String> framesCopy = frames;
             final ItemStack itemStack = new ItemStack(intelligentItem.getItemStack());
             int materialState = 0;
@@ -160,7 +222,7 @@ public class IntelligentMaterialAnimator {
                 if (this.currentFrameIndex + 1 >= this.framesCopy.size())
                     this.currentFrameIndex = 0;
             }
-        }, this.delay, this.period);
+        }, this.delay, this.period);*/
     }
 
     /**
@@ -169,7 +231,7 @@ public class IntelligentMaterialAnimator {
      * @return The task that is being run.
      */
     @ApiStatus.Internal
-    public @NotNull BukkitTask getTask() {
+    public @NotNull ScheduledTask getTask() {
         return this.task;
     }
 

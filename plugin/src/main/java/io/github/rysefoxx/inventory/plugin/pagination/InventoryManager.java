@@ -33,7 +33,6 @@ import io.github.rysefoxx.inventory.plugin.events.*;
 import io.github.rysefoxx.inventory.plugin.other.EventCreator;
 import lombok.AccessLevel;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -54,12 +53,12 @@ import org.bukkit.event.server.PluginDisableEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import space.arim.morepaperlib.MorePaperLib;
+import space.arim.morepaperlib.scheduling.ScheduledTask;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -68,10 +67,11 @@ import java.util.function.Consumer;
  * @author Rysefoxx | Rysefoxx#6772
  * @since 2/17/2022
  */
-@RequiredArgsConstructor
 public class InventoryManager {
 
     private final Plugin plugin;
+    @Getter(AccessLevel.PUBLIC)
+    private final MorePaperLib morePaperLib;
     @Getter(AccessLevel.PROTECTED)
     private boolean invoked = false;
 
@@ -79,9 +79,14 @@ public class InventoryManager {
     private final List<RyseInventory> cachedInventories = new ArrayList<>();
     private final HashMap<UUID, RyseInventory> inventories = new HashMap<>();
     private final HashMap<UUID, InventoryContents> content = new HashMap<>();
-    private final HashMap<UUID, BukkitTask> updaterTask = new HashMap<>();
+    private final HashMap<UUID, ScheduledTask> updaterTask = new HashMap<>();
     private final HashMap<UUID, List<RyseInventory>> lastInventories = new HashMap<>();
     private final HashMap<UUID, Long> lastOpen = new HashMap<>();
+
+    public InventoryManager(final Plugin plugin) {
+        this.plugin = plugin;
+        this.morePaperLib = new MorePaperLib(plugin);
+    }
 
 
     /*
@@ -242,7 +247,7 @@ public class InventoryManager {
         this.content.remove(uuid);
         this.lastInventories.clear();
         this.lastOpen.clear();
-        BukkitTask task = this.updaterTask.remove(uuid);
+        ScheduledTask task = this.updaterTask.remove(uuid);
 
         if (task != null)
             task.cancel();
@@ -306,7 +311,7 @@ public class InventoryManager {
     protected void stopUpdate(@NotNull UUID uuid) {
         if (!this.updaterTask.containsKey(uuid)) return;
 
-        BukkitTask task = this.updaterTask.remove(uuid);
+        ScheduledTask task = this.updaterTask.remove(uuid);
         task.cancel();
     }
 
@@ -321,7 +326,24 @@ public class InventoryManager {
         if (this.updaterTask.containsKey(player.getUniqueId())) return;
         if (!inventory.isUpdateTask()) return;
 
-        BukkitTask task = new BukkitRunnable() {
+        int delay = inventory.getDelay();
+        if (morePaperLib.scheduling().isUsingFolia() && delay == 0) {
+            delay = 1;
+        }
+        morePaperLib.scheduling().globalRegionalScheduler().runAtFixedRate(scheduledTask -> {
+            if (!hasInventory(player.getUniqueId())) {
+                scheduledTask.cancel();
+                return;
+            }
+            RyseInventory savedInventory = inventories.get(player.getUniqueId());
+            if (savedInventory != inventory) {
+                scheduledTask.cancel();
+                return;
+            }
+            savedInventory.getProvider().update(player, content.get(player.getUniqueId()));
+            this.updaterTask.put(player.getUniqueId(), scheduledTask);
+        }, delay, inventory.getPeriod());
+        /*BukkitTask task = new BukkitRunnable() {
             @Override
             public void run() {
                 if (!hasInventory(player.getUniqueId())) {
@@ -336,7 +358,7 @@ public class InventoryManager {
                 savedInventory.getProvider().update(player, content.get(player.getUniqueId()));
             }
         }.runTaskTimer(this.plugin, inventory.getDelay(), inventory.getPeriod());
-        this.updaterTask.put(player.getUniqueId(), task);
+        this.updaterTask.put(player.getUniqueId(), task);*/
     }
 
     /**
@@ -461,8 +483,10 @@ public class InventoryManager {
             }
 
             EventCreator<InventoryClickEvent> customEvent = (EventCreator<InventoryClickEvent>) mainInventory.getEvent(InventoryClickEvent.class);
-            if (customEvent != null)
-                Bukkit.getScheduler().runTaskLater(plugin, () -> customEvent.accept(event), 2L);
+            if (customEvent != null) {
+                //Bukkit.getScheduler().runTaskLater(plugin, () -> customEvent.accept(event), 2L);
+                morePaperLib.scheduling().globalRegionalScheduler().runDelayed(() -> customEvent.accept(event), 2L);
+            }
 
             List<DisabledInventoryClick> list = mainInventory.getIgnoreClickEvent();
 
@@ -570,10 +594,14 @@ public class InventoryManager {
                         return;
                     }
 
-                    if (item.getDelayTask() != null && Bukkit.getScheduler().isCurrentlyRunning(item.getDelayTask().getTaskId()))
+                    if (item.getDelayTask() != null && item.getDelayTask().getExecutionState() == ScheduledTask.ExecutionState.RUNNING)
                         return;
 
-                    item.setDelayTask(Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                    int delay = item.getDelay();
+                    if (morePaperLib.scheduling().isUsingFolia() && delay <= 0) {
+                        delay = 1;
+                    }
+                    item.setDelayTask(morePaperLib.scheduling().globalRegionalScheduler().runDelayed(() -> {
                         if (!item.isCanClick()) {
                             item.getError().cantClick(player, item);
                             return;
@@ -581,7 +609,16 @@ public class InventoryManager {
                         item.setDelayTask(null);
                         item.getDefaultConsumer().accept(event);
                         player.updateInventory();
-                    }, item.getDelay()));
+                    }, delay));
+                    /*item.setDelayTask(Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                        if (!item.isCanClick()) {
+                            item.getError().cantClick(player, item);
+                            return;
+                        }
+                        item.setDelayTask(null);
+                        item.getDefaultConsumer().accept(event);
+                        player.updateInventory();
+                    }, item.getDelay()));*/
                 });
             }
         }
@@ -623,7 +660,8 @@ public class InventoryManager {
             RyseInventory mainInventory = inventories.get(player.getUniqueId());
 
             if (!mainInventory.isCloseAble()) {
-                Bukkit.getScheduler().runTask(plugin, () -> mainInventory.open(player));
+                //Bukkit.getScheduler().runTask(plugin, () -> mainInventory.open(player));
+                morePaperLib.scheduling().globalRegionalScheduler().run(() -> mainInventory.open(player));
                 return;
             }
 

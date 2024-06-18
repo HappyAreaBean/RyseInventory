@@ -432,9 +432,10 @@ public class InventoryContents {
 
         if (finalTime != -1) {
             AtomicBoolean success = new AtomicBoolean(false);
-            Bukkit.getScheduler().runTaskLater(this.plugin, () -> {
+            /*Bukkit.getScheduler().runTaskLater(this.plugin, () -> {
                 success.set(updateItem(slots, itemStack));
-            }, finalTime);
+            }, finalTime);*/
+            inventory.getManager().getMorePaperLib().scheduling().globalRegionalScheduler().runDelayed(() -> success.set(update(slots, itemStack)), finalTime);
             return success.get();
         }
 
@@ -473,9 +474,10 @@ public class InventoryContents {
 
         if (finalTime != -1) {
             AtomicBoolean success = new AtomicBoolean(false);
-            Bukkit.getScheduler().runTaskLater(this.plugin, () -> {
+            /*Bukkit.getScheduler().runTaskLater(this.plugin, () -> {
                 success.set(updateOrSetItem(slot, intelligentItem));
-            }, finalTime);
+            }, finalTime);*/
+            inventory.getManager().getMorePaperLib().scheduling().globalRegionalScheduler().runDelayed(() -> success.set(updateOrSetItem(slot, intelligentItem)), finalTime);
             return success.get();
         }
 
