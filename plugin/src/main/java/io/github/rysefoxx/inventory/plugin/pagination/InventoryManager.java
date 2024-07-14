@@ -31,12 +31,14 @@ import io.github.rysefoxx.inventory.plugin.content.InventoryContents;
 import io.github.rysefoxx.inventory.plugin.enums.*;
 import io.github.rysefoxx.inventory.plugin.events.*;
 import io.github.rysefoxx.inventory.plugin.other.EventCreator;
+import io.github.rysefoxx.inventory.plugin.util.InventoryUtil;
 import lombok.AccessLevel;
 import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -468,8 +470,9 @@ public class InventoryManager {
         @EventHandler(priority = EventPriority.LOWEST)
         @SuppressWarnings("unchecked")
         public void onInventoryClick(@NotNull InventoryClickEvent event) {
-            if (!(event.getWhoClicked() instanceof Player)) return;
-            Player player = (Player) event.getWhoClicked();
+            HumanEntity whoClicked = InventoryUtil.getPlayer(event);
+            if (!(whoClicked instanceof Player)) return;
+            Player player = (Player) whoClicked;
             ItemStack itemStack = event.getCurrentItem();
 
             if (!hasInventory(player.getUniqueId()))
@@ -492,8 +495,8 @@ public class InventoryManager {
 
             InventoryAction action = event.getAction();
             Inventory clickedInventory = event.getClickedInventory();
-            Inventory bottomInventory = player.getOpenInventory().getBottomInventory();
-            Inventory topInventory = player.getOpenInventory().getTopInventory();
+            Inventory bottomInventory = InventoryUtil.getPlayerBottomInventory(player);
+            Inventory topInventory = InventoryUtil.getPlayerTopInventory(player);
             int slot = event.getSlot();
             ClickType clickType = event.getClick();
             InventoryContents contents = content.get(player.getUniqueId());
@@ -626,12 +629,13 @@ public class InventoryManager {
         @EventHandler(priority = EventPriority.LOWEST)
         @SuppressWarnings("unchecked")
         public void onInventoryDrag(@NotNull InventoryDragEvent event) {
-            if (!(event.getWhoClicked() instanceof Player)) return;
-            Player player = (Player) event.getWhoClicked();
+            HumanEntity whoClicked = InventoryUtil.getPlayer(event);
+            if (!(whoClicked instanceof Player)) return;
+            Player player = (Player) whoClicked;
             if (!hasInventory(player.getUniqueId()))
                 return;
 
-            Inventory topInventory = player.getOpenInventory().getTopInventory();
+            Inventory topInventory = InventoryUtil.getPlayerTopInventory(player);
             RyseInventory mainInventory = inventories.get(player.getUniqueId());
 
             EventCreator<InventoryDragEvent> customEvent = (EventCreator<InventoryDragEvent>) mainInventory.getEvent(InventoryDragEvent.class);

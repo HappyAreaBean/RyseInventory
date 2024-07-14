@@ -12,23 +12,25 @@ repositories {
 }
 
 dependencies {
+    implementation(project(":v1_21"))
+    implementation(project(":v1_20"))
     implementation(project(":v1_19"))
     implementation(project(":v1_18"))
     implementation(project(":v1_17"))
     implementation(project(":v1_16"))
     implementation(project(":api"))
-    implementation("net.wesjd:anvilgui:1.9.2-SNAPSHOT")
+    implementation("net.wesjd:anvilgui:1.9.3-SNAPSHOT")
     implementation("space.arim.morepaperlib:morepaperlib:0.4.4")
-    implementation("com.github.cryptomorin:XSeries:11.0.0") { isTransitive = false }
+    implementation("com.github.cryptomorin:XSeries:11.2.0") { isTransitive = false }
 
-    compileOnly("net.kyori:adventure-platform-bukkit:4.3.1")
+    compileOnly("net.kyori:adventure-platform-bukkit:4.3.2")
     compileOnly("org.spigotmc:spigot-api:1.20.1-R0.1-SNAPSHOT")
     compileOnly("org.apache.commons:commons-lang3:3.12.0")
-    compileOnly("org.jetbrains:annotations:24.0.1")
+    compileOnly("org.jetbrains:annotations:24.1.0")
     compileOnly("com.google.code.findbugs:jsr305:3.0.2")
 
-    annotationProcessor("org.projectlombok:lombok:1.18.24")
-    compileOnly("org.projectlombok:lombok:1.18.24")
+    annotationProcessor("org.projectlombok:lombok:1.18.32")
+    compileOnly("org.projectlombok:lombok:1.18.32")
 }
 
 publishing {
@@ -63,7 +65,23 @@ publishing {
 
 tasks {
     shadowJar {
-        minimize()
+        //minimize()
+
+        exclude("com/cryptomorin/xseries/abstractions/*")
+        exclude("com/cryptomorin/xseries/messages/*")
+        exclude("com/cryptomorin/xseries/particles/*")
+        exclude("com/cryptomorin/xseries/profiles/*")
+        exclude("com/cryptomorin/xseries/XBiome*")
+        exclude("com/cryptomorin/xseries/XBlock*")
+        exclude("com/cryptomorin/xseries/XEntity*")
+        exclude("com/cryptomorin/xseries/XMaterial*")
+        exclude("com/cryptomorin/xseries/XItemStack*")
+        exclude("com/cryptomorin/xseries/XSound*")
+        exclude("com/cryptomorin/xseries/XTag*")
+        exclude("com/cryptomorin/xseries/XPotion*")
+        exclude("com/cryptomorin/xseries/XWorldBorder*")
+        exclude("com/cryptomorin/xseries/NoteBlockMusic*")
+        exclude("com/cryptomorin/xseries/SkullCacheListener*")
 
         archiveClassifier.set("")
         relocate("net.wesjd.anvilgui", "io.github.rysefoxx.inventory.anvilgui")
