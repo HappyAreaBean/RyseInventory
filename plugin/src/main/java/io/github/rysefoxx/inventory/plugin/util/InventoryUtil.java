@@ -8,6 +8,11 @@ import org.bukkit.inventory.Inventory;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
+/**
+ * In API versions 1.20.6 and earlier, InventoryView is a class.
+ * In versions 1.21 and later, it is an interface.
+ * This class provides some methods that uses reflection to work around that.
+ */
 public class InventoryUtil {
 
     /**
