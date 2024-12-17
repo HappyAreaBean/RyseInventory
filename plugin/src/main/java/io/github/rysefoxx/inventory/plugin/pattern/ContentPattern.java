@@ -96,7 +96,7 @@ public class ContentPattern {
         int slot = -1;
 
         for (String line : this.lines) {
-            for (int i = 0; i < line.toCharArray().length; i++) {
+            for (int i = 0; i < line.length(); i++) {
                 slot++;
                 char c = line.charAt(i);
                 if (c != frame) continue;
