@@ -1082,17 +1082,17 @@ public class RyseInventory {
      * It removes all the active animations
      */
     private void removeActiveAnimations() {
-        for (int i = 0; i < this.itemAnimator.size(); i++)
-            removeItemAnimator(this.itemAnimator.get(i));
+        for (IntelligentItemNameAnimator intelligentItemNameAnimator : this.itemAnimator)
+            removeItemAnimator(intelligentItemNameAnimator);
 
-        for (int i = 0; i < this.titleAnimator.size(); i++)
-            removeTitleAnimator(this.titleAnimator.get(i));
+        for (IntelligentTitleAnimator intelligentTitleAnimator : this.titleAnimator)
+            removeTitleAnimator(intelligentTitleAnimator);
 
-        for (int i = 0; i < this.loreAnimator.size(); i++)
-            removeLoreAnimator(this.loreAnimator.get(i));
+        for (IntelligentItemLoreAnimator intelligentItemLoreAnimator : this.loreAnimator)
+            removeLoreAnimator(intelligentItemLoreAnimator);
 
-        for (int i = 0; i < this.materialAnimator.size(); i++)
-            removeMaterialAnimator(this.materialAnimator.get(i));
+        for (IntelligentMaterialAnimator intelligentMaterialAnimator : this.materialAnimator)
+            removeMaterialAnimator(intelligentMaterialAnimator);
 
         removeSlideAnimator();
     }
