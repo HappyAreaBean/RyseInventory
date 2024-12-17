@@ -24,7 +24,6 @@ import java.util.Set;
  * A utility class for update the inventory of a player.
  * This is useful to change the title of an inventory.
  */
-@SuppressWarnings("ConstantConditions")
 public final class TitleUpdater {
 
     // Classes.
