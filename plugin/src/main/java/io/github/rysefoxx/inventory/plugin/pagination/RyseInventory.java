@@ -1567,8 +1567,7 @@ public class RyseInventory {
         if (this.paginationCache == null)
             this.paginationCache = paginationData.newInstance();
 
-        for (int i = 0; i < data.size(); i++) {
-            IntelligentItemData itemData = data.get(i);
+        for (IntelligentItemData itemData : data) {
             if (itemData.getModifiedSlot() != -1) continue;
 
             int slot = paginationData.getFirstSlot();
