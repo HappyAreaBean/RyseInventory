@@ -59,6 +59,7 @@ import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import space.arim.morepaperlib.scheduling.ScheduledTask;
 
 import javax.annotation.Nonnegative;
 import java.lang.reflect.Field;
@@ -563,7 +564,7 @@ public class RyseInventory {
      * @param page   Which page should be opened?
      */
     public void open(@NotNull Player player, @Nonnegative int page) {
-        Bukkit.getScheduler().runTask(this.plugin, () -> initInventory(player, page, null, null));
+        manager.getMorePaperLib().scheduling().globalRegionalScheduler().run(() -> initInventory(player, page, null, null));
     }
 
     /**
@@ -578,7 +579,7 @@ public class RyseInventory {
     public void open(@NotNull Player player, @Nonnegative int page, String @NotNull [] keys, Object @NotNull [] values) throws IllegalArgumentException {
         Preconditions.checkArgument(keys.length == values.length, StringConstants.INVALID_OBJECT);
 
-        Bukkit.getScheduler().runTask(this.plugin, () -> initInventory(player, page, keys, values));
+        manager.getMorePaperLib().scheduling().globalRegionalScheduler().run(() -> initInventory(player, page, keys, values));
     }
 
     /**
@@ -592,7 +593,7 @@ public class RyseInventory {
         String[] keys = data.keySet().toArray(new String[0]);
         Object[] values = data.values().toArray();
 
-        Bukkit.getScheduler().runTask(this.plugin, () -> initInventory(player, page, keys, values));
+        open(player, page, keys, values);
     }
 
     /**
@@ -606,7 +607,7 @@ public class RyseInventory {
     public void open(@NotNull Player player, String @NotNull [] keys, Object @NotNull [] values) throws IllegalArgumentException {
         Preconditions.checkArgument(keys.length == values.length, StringConstants.INVALID_OBJECT);
 
-        Bukkit.getScheduler().runTask(this.plugin, () -> initInventory(player, 1, keys, values));
+        open(player, 1, keys, values);
     }
 
     /**
@@ -619,7 +620,7 @@ public class RyseInventory {
         String[] keys = data.keySet().toArray(new String[0]);
         Object[] values = data.values().toArray();
 
-        Bukkit.getScheduler().runTask(this.plugin, () -> initInventory(player, 1, keys, values));
+        open(player, 1, keys, values);
     }
 
     /**
@@ -639,7 +640,7 @@ public class RyseInventory {
     private void initInventory(@NotNull Player player, @Nonnegative int page, @Nullable String[] keys, @Nullable Object[] values) {
         if (!manager.canOpen(player.getUniqueId())) {
             int finalPage = page;
-            Bukkit.getScheduler().runTaskLater(this.plugin, () -> initInventory(player, finalPage, keys, values), 2);
+            manager.getMorePaperLib().scheduling().globalRegionalScheduler().runDelayed(() -> initInventory(player, finalPage, keys, values), 2L);
             return;
         }
 
@@ -915,8 +916,8 @@ public class RyseInventory {
         if (this.slideAnimator == null) return 0;
         AtomicInteger counter = new AtomicInteger();
 
-        this.slideAnimator.getTasks().forEach(task -> {
-            if (!Bukkit.getScheduler().isQueued(task.getTaskId())) return;
+        this.slideAnimator.getTasks().forEach(scheduledTask -> {
+            if (scheduledTask.getExecutionState() != ScheduledTask.ExecutionState.IDLE) return;
             counter.getAndIncrement();
         });
         return counter.get();
@@ -1074,24 +1075,24 @@ public class RyseInventory {
         if (!this.closeAble)
             throw new IllegalStateException("The #closeAfter() method could not be executed because you have forbidden closing the inventory by #preventClose.");
 
-        Bukkit.getScheduler().runTaskLater(this.plugin, () -> close(player), this.closeAfter);
+        manager.getMorePaperLib().scheduling().globalRegionalScheduler().runDelayed(() -> close(player), this.closeAfter);
     }
 
     /**
      * It removes all the active animations
      */
     private void removeActiveAnimations() {
-        for (int i = 0; i < this.itemAnimator.size(); i++)
-            removeItemAnimator(this.itemAnimator.get(i));
+        for (IntelligentItemNameAnimator intelligentItemNameAnimator : this.itemAnimator)
+            removeItemAnimator(intelligentItemNameAnimator);
 
-        for (int i = 0; i < this.titleAnimator.size(); i++)
-            removeTitleAnimator(this.titleAnimator.get(i));
+        for (IntelligentTitleAnimator intelligentTitleAnimator : this.titleAnimator)
+            removeTitleAnimator(intelligentTitleAnimator);
 
-        for (int i = 0; i < this.loreAnimator.size(); i++)
-            removeLoreAnimator(this.loreAnimator.get(i));
+        for (IntelligentItemLoreAnimator intelligentItemLoreAnimator : this.loreAnimator)
+            removeLoreAnimator(intelligentItemLoreAnimator);
 
-        for (int i = 0; i < this.materialAnimator.size(); i++)
-            removeMaterialAnimator(this.materialAnimator.get(i));
+        for (IntelligentMaterialAnimator intelligentMaterialAnimator : this.materialAnimator)
+            removeMaterialAnimator(intelligentMaterialAnimator);
 
         removeSlideAnimator();
     }
@@ -1257,13 +1258,13 @@ public class RyseInventory {
                            @NotNull Pagination pagination,
                            @NotNull Player player) {
         if (this.loadDelay != -1) {
-            Bukkit.getScheduler().runTaskLater(this.plugin, () -> load(pagination, player, page), this.loadDelay);
+            manager.getMorePaperLib().scheduling().globalRegionalScheduler().runDelayed(() -> load(pagination, player, page), this.loadDelay);
         } else {
             load(pagination, player, page);
         }
 
         if (this.loadTitle != -1)
-            Bukkit.getScheduler().runTaskLater(this.plugin, () -> updateTitle(player, this.title), this.loadTitle);
+            manager.getMorePaperLib().scheduling().globalRegionalScheduler().runDelayed(() -> updateTitle(player, this.title), this.loadTitle);
     }
 
 
@@ -1289,13 +1290,12 @@ public class RyseInventory {
         if (this.keepOriginal)
             this.originalInventory = this;
 
-        Bukkit.getScheduler().runTask(this.plugin, () -> {
+        manager.getMorePaperLib().scheduling().globalRegionalScheduler().run(() -> {
             if (this.openDelay == -1 || this.delayed.contains(player)) {
                 openInventory(player, contents);
             } else {
                 if (!this.delayed.contains(player)) {
-                    Bukkit.getScheduler().runTaskLater(this.plugin, () ->
-                            openInventory(player, contents), this.openDelay);
+                    manager.getMorePaperLib().scheduling().globalRegionalScheduler().runDelayed(() -> openInventory(player, contents), this.openDelay);
                     this.delayed.add(player);
                 }
             }
@@ -1398,7 +1398,8 @@ public class RyseInventory {
     protected void clearData(@NotNull Player player) {
         if (this.playerInventory.containsKey(player.getUniqueId())) {
             ItemStack[] data = this.playerInventory.remove(player.getUniqueId());
-            Bukkit.getScheduler().runTaskLater(this.plugin, () -> player.getInventory().setContents(data), 2);
+            /*Bukkit.getScheduler().runTaskLater(this.plugin, () -> player.getInventory().setContents(data), 2);*/
+            manager.getMorePaperLib().scheduling().globalRegionalScheduler().runDelayed(() -> player.getInventory().setContents(data), 2L);
         }
 
         this.delayed.remove(player);
@@ -1435,7 +1436,7 @@ public class RyseInventory {
     public void removeMaterialAnimator(@NotNull IntelligentMaterialAnimator animator) {
         this.materialAnimator.remove(animator);
 
-        if (!Bukkit.getScheduler().isQueued(animator.getTask().getTaskId())) return;
+        if (animator.getTask().getExecutionState() != ScheduledTask.ExecutionState.IDLE) return;
         animator.getTask().cancel();
     }
 
@@ -1448,7 +1449,7 @@ public class RyseInventory {
     public void removeItemAnimator(@NotNull IntelligentItemNameAnimator animator) {
         this.itemAnimator.remove(animator);
 
-        if (!Bukkit.getScheduler().isQueued(animator.getTask().getTaskId())) return;
+        if (animator.getTask().getExecutionState() != ScheduledTask.ExecutionState.IDLE) return;
         animator.getTask().cancel();
     }
 
@@ -1471,7 +1472,7 @@ public class RyseInventory {
     public void removeTitleAnimator(@NotNull IntelligentTitleAnimator animator) {
         this.titleAnimator.remove(animator);
 
-        if (!Bukkit.getScheduler().isQueued(animator.getTask().getTaskId())) return;
+        if (animator.getTask().getExecutionState() != ScheduledTask.ExecutionState.IDLE) return;
         animator.getTask().cancel();
     }
 
@@ -1494,9 +1495,9 @@ public class RyseInventory {
     public void removeLoreAnimator(@NotNull IntelligentItemLoreAnimator animator) {
         this.loreAnimator.remove(animator);
 
-        animator.getTasks().forEach(bukkitTask -> {
-            if (!Bukkit.getScheduler().isQueued(bukkitTask.getTaskId())) return;
-            bukkitTask.cancel();
+        animator.getTasks().forEach(scheduledTask -> {
+            if (scheduledTask.getExecutionState() != ScheduledTask.ExecutionState.IDLE) return;
+            scheduledTask.cancel();
         });
     }
 
@@ -1507,9 +1508,9 @@ public class RyseInventory {
     protected void removeSlideAnimator() {
         if (this.slideAnimator == null) return;
 
-        this.slideAnimator.getTasks().forEach(bukkitTask -> {
-            if (!Bukkit.getScheduler().isQueued(bukkitTask.getTaskId())) return;
-            bukkitTask.cancel();
+        this.slideAnimator.getTasks().forEach(scheduledTask -> {
+            if (scheduledTask.getExecutionState() != ScheduledTask.ExecutionState.IDLE) return;
+            scheduledTask.cancel();
         });
         this.slideAnimator.clearTasks();
     }
@@ -1566,8 +1567,7 @@ public class RyseInventory {
         if (this.paginationCache == null)
             this.paginationCache = paginationData.newInstance();
 
-        for (int i = 0; i < data.size(); i++) {
-            IntelligentItemData itemData = data.get(i);
+        for (IntelligentItemData itemData : data) {
             if (itemData.getModifiedSlot() != -1) continue;
 
             int slot = paginationData.getFirstSlot();

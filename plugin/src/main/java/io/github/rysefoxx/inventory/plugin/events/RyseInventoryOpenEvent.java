@@ -66,7 +66,7 @@ public class RyseInventoryOpenEvent extends PlayerEvent {
     }
 
     @Override
-    public HandlerList getHandlers() {
+    public @NotNull HandlerList getHandlers() {
         return HANDLERS_LIST;
     }
 }

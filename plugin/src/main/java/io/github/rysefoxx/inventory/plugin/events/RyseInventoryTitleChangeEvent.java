@@ -137,7 +137,7 @@ public class RyseInventoryTitleChangeEvent extends PlayerEvent implements Cancel
     }
 
     @Override
-    public HandlerList getHandlers() {
+    public @NotNull HandlerList getHandlers() {
         return HANDLERS_LIST;
     }
 }

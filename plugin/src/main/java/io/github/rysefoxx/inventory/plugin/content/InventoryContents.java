@@ -432,9 +432,10 @@ public class InventoryContents {
 
         if (finalTime != -1) {
             AtomicBoolean success = new AtomicBoolean(false);
-            Bukkit.getScheduler().runTaskLater(this.plugin, () -> {
+            /*Bukkit.getScheduler().runTaskLater(this.plugin, () -> {
                 success.set(updateItem(slots, itemStack));
-            }, finalTime);
+            }, finalTime);*/
+            inventory.getManager().getMorePaperLib().scheduling().globalRegionalScheduler().runDelayed(() -> success.set(update(slots, itemStack)), finalTime);
             return success.get();
         }
 
@@ -473,9 +474,10 @@ public class InventoryContents {
 
         if (finalTime != -1) {
             AtomicBoolean success = new AtomicBoolean(false);
-            Bukkit.getScheduler().runTaskLater(this.plugin, () -> {
+            /*Bukkit.getScheduler().runTaskLater(this.plugin, () -> {
                 success.set(updateOrSetItem(slot, intelligentItem));
-            }, finalTime);
+            }, finalTime);*/
+            inventory.getManager().getMorePaperLib().scheduling().globalRegionalScheduler().runDelayed(() -> success.set(updateOrSetItem(slot, intelligentItem)), finalTime);
             return success.get();
         }
 
@@ -1728,6 +1730,7 @@ public class InventoryContents {
 
         InventoryContents contents = new InventoryContents(this.player, this.inventory, this.plugin);
         this.inventory.getManager().setContents(this.player.getUniqueId(), contents);
+        transferData(contents);
 
         if (this.pagination.page() <= contents.pagination.lastPage()) {
             contents.pagination.page(this.pagination.page() - 1);
@@ -1740,16 +1743,6 @@ public class InventoryContents {
 
 
         this.inventory.loadByPage(contents);
-        /*System.out.println(this.pagination.page());
-        System.out.println(this.pagination.lastPage());
-        System.out.println(contents.pagination.page());
-        System.out.println(contents.pagination.lastPage());
-        System.out.println(this.pagination.page() < contents.pagination.lastPage());
-        if (this.pagination.page() < contents.pagination.lastPage()) {
-            this.inventory.load(contents.pagination(), this.player, this.pagination.page() - 1);
-        } else {
-            this.inventory.load(contents.pagination(), this.player, contents.pagination.page() - 1);
-        }*/
         this.inventory.load(contents.pagination(), this.player, contents.pagination.page() - 1);
     }
 

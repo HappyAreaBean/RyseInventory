@@ -29,11 +29,11 @@ import io.github.rysefoxx.inventory.plugin.pagination.InventoryManager;
 import lombok.Getter;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import space.arim.morepaperlib.scheduling.ScheduledTask;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -59,7 +59,7 @@ public class IntelligentItem {
     private int delay;
 
     private @Nullable Object id;
-    private @Nullable BukkitTask delayTask;
+    private @Nullable ScheduledTask delayTask;
 
     //For serialization
     @Contract(pure = true)
@@ -357,7 +357,7 @@ public class IntelligentItem {
     }
 
     @ApiStatus.Internal
-    public void setDelayTask(@Nullable BukkitTask delayTask) {
+    public void setDelayTask(@Nullable ScheduledTask delayTask) {
         this.delayTask = delayTask;
     }
 }

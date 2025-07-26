@@ -25,6 +25,7 @@
 
 package io.github.rysefoxx.inventory.plugin.content;
 
+import com.cryptomorin.xseries.reflection.XReflection;
 import io.github.rysefoxx.inventory.api.IntelligentItemColorWrapper;
 import io.github.rysefoxx.inventory.plugin.util.VersionUtils;
 import lombok.AccessLevel;
@@ -291,11 +292,13 @@ public class IntelligentItemColor {
          */
         public @NotNull Builder rgbColor(@Nonnegative int red, @Nonnegative int green, @Nonnegative int blue)
                 throws IllegalArgumentException, UnsupportedClassVersionError {
-            if (!VersionUtils.isAtleast16())
+            if (!XReflection.supports(16)) {
                 throw new UnsupportedClassVersionError("For RGB color, the server must be running on at least 1.16.");
+            }
 
-            if (red > 255 || green > 255 || blue > 255)
+            if (red > 255 || green > 255 || blue > 255) {
                 throw new IllegalArgumentException("The RGB color can not be greater than 255.");
+            }
 
             this.needWrapper = true;
 
@@ -348,13 +351,16 @@ public class IntelligentItemColor {
          * @throws UnsupportedClassVersionError If the server is running under 1.16.
          */
         public @NotNull Builder hexColor(@NotNull String hexColor) throws IllegalArgumentException, UnsupportedClassVersionError {
-            if (!VersionUtils.isAtleast16())
+            if (!XReflection.supports(16)) {
                 throw new UnsupportedClassVersionError("For Hex color, the server must be running on at least 1.16.");
+            }
 
-            if (!hexColor.startsWith("#"))
+            if (!hexColor.startsWith("#")) {
                 hexColor = "#" + hexColor;
-            if (hexColor.length() > 7)
+            }
+            if (hexColor.length() > 7) {
                 throw new IllegalArgumentException("The hex input must not be longer than 7 characters.");
+            }
 
             this.needWrapper = true;
 

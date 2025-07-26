@@ -34,16 +34,15 @@ import io.github.rysefoxx.inventory.plugin.enums.TimeSetting;
 import io.github.rysefoxx.inventory.plugin.pagination.RyseInventory;
 import io.github.rysefoxx.inventory.plugin.util.StringConstants;
 import io.github.rysefoxx.inventory.plugin.util.TimeUtils;
-import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import space.arim.morepaperlib.scheduling.ScheduledTask;
 
 import javax.annotation.Nonnegative;
 import java.util.ArrayList;
@@ -63,7 +62,7 @@ public class IntelligentItemNameAnimator {
     private int period = 20;
     private int delay = 0;
     private int slot = -1;
-    private BukkitTask task;
+    private ScheduledTask task;
     private boolean loop;
     private RyseInventory inventory;
     private InventoryContents contents;
@@ -91,7 +90,7 @@ public class IntelligentItemNameAnimator {
      * @return true if the animation was stopped.
      */
     public boolean stop() {
-        if (this.task == null || !Bukkit.getScheduler().isQueued(this.task.getTaskId()))
+        if (this.task == null || this.task.getExecutionState() != ScheduledTask.ExecutionState.IDLE)
             return false;
 
         this.task.cancel();
@@ -121,7 +120,76 @@ public class IntelligentItemNameAnimator {
      * through the characters in the display name, and then updates the display name with the current frame character
      */
     private void animateWithFlash() {
-        this.task = Bukkit.getScheduler().runTaskTimer(plugin, new Runnable() {
+        this.task = inventory.getManager().getMorePaperLib().scheduling().globalRegionalScheduler()
+                .runAtFixedRate(new Runnable() {
+                    final char[] letters = ChatColor.stripColor(displayName).toCharArray();
+                    final List<String> framesCopy = frames;
+                    final String fixedDisplayName = ChatColor.stripColor(displayName);
+
+                    int colorState = 0;
+                    int subStringIndex = 0;
+                    int currentFrameIndex = 0;
+
+                    @Override
+                    public void run() {
+                        resetWhenFrameFinished();
+
+                        if (cancelIfListIsEmpty()) return;
+
+                        char[] currentFrames = updateFramesWhenRequired();
+
+                        char singleFrame = currentFrames[this.colorState];
+                        IntelligentItemColor itemColor = frameColor.get(singleFrame);
+
+                        String currentName = itemColor.getColor()
+                                + (itemColor.isBold() ? "§l" : "")
+                                + (itemColor.isUnderline() ? "§n" : "")
+                                + (itemColor.isItalic() ? "§o" : "")
+                                + (itemColor.isObfuscated() ? "§k" : "")
+                                + (itemColor.isStrikeThrough() ? "§m" : "")
+                                + this.fixedDisplayName;
+
+                        this.colorState++;
+                        this.subStringIndex++;
+                        updateDisplayName(contents, currentName);
+                    }
+
+                    private char @NotNull [] updateFramesWhenRequired() {
+                        char[] currentFrames = framesCopy.get(this.currentFrameIndex).toCharArray();
+                        if (this.colorState < currentFrames.length) return currentFrames;
+
+                        this.colorState = 0;
+
+                        if (this.framesCopy.size() > 1 && (this.currentFrameIndex + 1 != this.framesCopy.size())) {
+                            this.currentFrameIndex++;
+                            currentFrames = this.framesCopy.get(this.currentFrameIndex).toCharArray();
+                        }
+                        return currentFrames;
+                    }
+
+                    private boolean cancelIfListIsEmpty() {
+                        if (this.framesCopy.isEmpty()) {
+                            inventory.removeItemAnimator(IntelligentItemNameAnimator.this);
+                            return true;
+                        }
+                        return false;
+                    }
+
+                    private void resetWhenFrameFinished() {
+                        if (this.subStringIndex < this.letters.length) return;
+
+                        if (!loop)
+                            this.framesCopy.remove(0);
+                        this.colorState = 0;
+                        this.subStringIndex = 0;
+
+                        if (this.currentFrameIndex + 1 < this.framesCopy.size())
+                            return;
+                        this.currentFrameIndex = 0;
+                    }
+                }, this.delay, this.period);
+
+        /*this.task = Bukkit.getScheduler().runTaskTimer(plugin, new Runnable() {
             final char[] letters = ChatColor.stripColor(displayName).toCharArray();
             final List<String> framesCopy = frames;
             final String fixedDisplayName = ChatColor.stripColor(displayName);
@@ -187,7 +255,7 @@ public class IntelligentItemNameAnimator {
                     return;
                 this.currentFrameIndex = 0;
             }
-        }, this.delay, this.period);
+        }, this.delay, this.period);*/
     }
 
     /**
@@ -195,7 +263,96 @@ public class IntelligentItemNameAnimator {
      * updates the display name with the current frame and the current letter
      */
     private void animateByFullWord() {
-        this.task = Bukkit.getScheduler().runTaskTimer(plugin, new Runnable() {
+        this.task = inventory.getManager().getMorePaperLib().scheduling().globalRegionalScheduler()
+                .runAtFixedRate(new Runnable() {
+                    final char[] letters = ChatColor.stripColor(displayName).toCharArray();
+                    final List<String> framesCopy = frames;
+                    final List<String> previous = new ArrayList<>();
+                    final String currentNameFixed = ChatColor.stripColor(displayName);
+
+                    int colorState = 0;
+                    int subStringIndex = 0;
+                    int currentFrameIndex = 0;
+
+                    @Override
+                    public void run() {
+                        resetWhenFrameFinished();
+
+                        if (cancelIfListIsEmpty()) return;
+
+                        char[] currentFrames = updateFramesWhenRequired();
+
+                        char singleFrame = currentFrames[this.colorState];
+                        IntelligentItemColor itemColor = frameColor.get(singleFrame);
+
+                        String letter = String.valueOf(this.letters[this.subStringIndex]);
+                        String rest = this.currentNameFixed.substring(this.subStringIndex + 1);
+                        boolean addColor = !letter.equals(" ");
+
+                        StringBuilder newString = new StringBuilder();
+                        if (this.subStringIndex != 0)
+                            this.previous.forEach(newString::append);
+
+                        newString.append(itemColor.getColor())
+                                .append(itemColor.isBold() ? "§l" : "")
+                                .append(itemColor.isUnderline() ? "§n" : "")
+                                .append(itemColor.isItalic() ? "§o" : "")
+                                .append(itemColor.isObfuscated() ? "§k" : "")
+                                .append(itemColor.isStrikeThrough() ? "§m" : "")
+                                .append(letter);
+
+                        String currentName = newString
+                                .append(ChatColor.WHITE).append(rest)
+                                .toString();
+
+                        this.previous.add(newString.toString());
+
+                        this.subStringIndex++;
+
+                        if (!addColor) return;
+
+                        this.colorState++;
+                        updateDisplayName(contents, currentName);
+                    }
+
+                    private boolean cancelIfListIsEmpty() {
+                        if (this.framesCopy.isEmpty()) {
+                            inventory.removeItemAnimator(IntelligentItemNameAnimator.this);
+                            return true;
+                        }
+                        return false;
+                    }
+
+                    private char @NotNull [] updateFramesWhenRequired() {
+                        char[] currentFrames = framesCopy.get(this.currentFrameIndex).toCharArray();
+
+                        if (this.colorState < currentFrames.length) return currentFrames;
+
+                        this.colorState = 0;
+                        if (this.framesCopy.size() > 1 && (this.currentFrameIndex + 1 != this.framesCopy.size())) {
+                            this.currentFrameIndex++;
+                            currentFrames = this.framesCopy.get(this.currentFrameIndex).toCharArray();
+                        }
+                        return currentFrames;
+                    }
+
+                    private void resetWhenFrameFinished() {
+                        if (this.subStringIndex < this.letters.length) return;
+
+                        if (!loop)
+                            this.framesCopy.remove(0);
+                        this.colorState = 0;
+                        this.subStringIndex = 0;
+                        this.previous.clear();
+
+                        if (this.currentFrameIndex + 1 < this.framesCopy.size())
+                            return;
+
+                        this.currentFrameIndex = 0;
+                    }
+                }, this.delay, this.period);
+
+        /*this.task = Bukkit.getScheduler().runTaskTimer(plugin, new Runnable() {
             final char[] letters = ChatColor.stripColor(displayName).toCharArray();
             final List<String> framesCopy = frames;
             final List<String> previous = new ArrayList<>();
@@ -281,7 +438,7 @@ public class IntelligentItemNameAnimator {
 
                 this.currentFrameIndex = 0;
             }
-        }, this.delay, this.period);
+        }, this.delay, this.period);*/
     }
 
     /**
@@ -289,7 +446,83 @@ public class IntelligentItemNameAnimator {
      * updates the display name with the current frame and the current letter
      */
     private void animateWordByWord() {
-        this.task = Bukkit.getScheduler().runTaskTimer(plugin, new Runnable() {
+        this.task = inventory.getManager().getMorePaperLib().scheduling().globalRegionalScheduler()
+                .runAtFixedRate(new Runnable() {
+                    final char[] letters = ChatColor.stripColor(displayName).toCharArray();
+                    final List<String> framesCopy = frames;
+
+                    int colorState = 0;
+                    int subStringIndex = 0;
+                    int currentFrameIndex = 0;
+                    String currentName = "";
+
+                    @Override
+                    public void run() {
+                        resetWhenFrameFinished();
+
+                        if (cancelIfListIsEmpty()) return;
+
+                        char[] currentFrames = updateFramesWhenRequired();
+
+                        String letter = String.valueOf(this.letters[this.subStringIndex]);
+                        boolean addColor = !letter.equals(" ");
+
+                        char singleFrame = currentFrames[this.colorState];
+                        IntelligentItemColor itemColor = frameColor.get(singleFrame);
+
+                        this.currentName = this.currentName + itemColor.getColor()
+                                + (itemColor.isBold() ? "§l" : "")
+                                + (itemColor.isUnderline() ? "§n" : "")
+                                + (itemColor.isItalic() ? "§o" : "")
+                                + (itemColor.isObfuscated() ? "§k" : "")
+                                + (itemColor.isStrikeThrough() ? "§m" : "")
+                                + letter;
+
+                        this.subStringIndex++;
+
+                        if (!addColor) return;
+
+                        this.colorState++;
+                        updateDisplayName(contents, this.currentName);
+                    }
+
+                    private char @NotNull [] updateFramesWhenRequired() {
+                        char[] currentFrames = framesCopy.get(this.currentFrameIndex).toCharArray();
+                        if (this.colorState < currentFrames.length) return currentFrames;
+
+                        this.colorState = 0;
+                        if (this.framesCopy.size() > 1 && (this.currentFrameIndex + 1 != this.framesCopy.size())) {
+                            this.currentFrameIndex++;
+                            currentFrames = this.framesCopy.get(this.currentFrameIndex).toCharArray();
+                        }
+                        return currentFrames;
+                    }
+
+                    private boolean cancelIfListIsEmpty() {
+                        if (this.framesCopy.isEmpty()) {
+                            inventory.removeItemAnimator(IntelligentItemNameAnimator.this);
+                            return true;
+                        }
+                        return false;
+                    }
+
+                    private void resetWhenFrameFinished() {
+                        if (this.subStringIndex < this.letters.length) return;
+
+                        if (!loop)
+                            this.framesCopy.remove(0);
+                        this.colorState = 0;
+                        this.subStringIndex = 0;
+                        this.currentName = "";
+
+                        if (this.currentFrameIndex + 1 < this.framesCopy.size())
+                            return;
+
+                        this.currentFrameIndex = 0;
+                    }
+                }, this.delay, this.period);
+
+        /*this.task = Bukkit.getScheduler().runTaskTimer(plugin, new Runnable() {
             final char[] letters = ChatColor.stripColor(displayName).toCharArray();
             final List<String> framesCopy = frames;
 
@@ -362,7 +595,7 @@ public class IntelligentItemNameAnimator {
 
                 this.currentFrameIndex = 0;
             }
-        }, this.delay, this.period);
+        }, this.delay, this.period);*/
     }
 
     /**
@@ -391,7 +624,7 @@ public class IntelligentItemNameAnimator {
      * @return The task that is being run.
      */
     @ApiStatus.Internal
-    public @NotNull BukkitTask getTask() {
+    public @NotNull ScheduledTask getTask() {
         return this.task;
     }
 

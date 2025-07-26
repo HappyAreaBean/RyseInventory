@@ -1,5 +1,7 @@
 package io.github.rysefoxx.inventory.plugin.util;
 
+import com.cryptomorin.xseries.reflection.XReflection;
+import com.cryptomorin.xseries.reflection.minecraft.MinecraftConnection;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import org.bukkit.entity.Player;
@@ -14,13 +16,14 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Set;
 
 /**
  * A utility class for update the inventory of a player.
  * This is useful to change the title of an inventory.
  */
-@SuppressWarnings("ConstantConditions")
 public final class TitleUpdater {
 
     // Classes.
@@ -51,20 +54,20 @@ public final class TitleUpdater {
 
     private static final JavaPlugin PLUGIN = JavaPlugin.getProvidingPlugin(TitleUpdater.class);
     private static final Set<String> UNOPENABLES = Sets.newHashSet("CRAFTING", "CREATIVE", "PLAYER");
-    private static final boolean SUPPORTS_19 = ReflectionUtils.supports(19);
+    private static final boolean SUPPORTS_19 = XReflection.supports(19);
     private static final Object[] DUMMY_COLOR_MODIFIERS = new Object[0];
 
     static {
         // Initialize classes.
-        CRAFT_PLAYER = ReflectionUtils.getCraftClass("entity.CraftPlayer");
-        CHAT_MESSAGE = SUPPORTS_19 ? null : ReflectionUtils.getNMSClass("network.chat", "ChatMessage");
-        PACKET_PLAY_OUT_OPEN_WINDOW = ReflectionUtils.getNMSClass("network.protocol.game", "PacketPlayOutOpenWindow");
-        I_CHAT_BASE_COMPONENT = ReflectionUtils.getNMSClass("network.chat", "IChatBaseComponent");
+        CRAFT_PLAYER = XReflection.getCraftClass("entity.CraftPlayer");
+        CHAT_MESSAGE = SUPPORTS_19 ? null : XReflection.getNMSClass("network.chat", "ChatMessage");
+        PACKET_PLAY_OUT_OPEN_WINDOW = XReflection.getNMSClass("network.protocol.game", "PacketPlayOutOpenWindow");
+        I_CHAT_BASE_COMPONENT = XReflection.getNMSClass("network.chat", "IChatBaseComponent");
         // Check if we use containers, otherwise, can throw errors on older versions.
-        CONTAINERS = useContainers() ? ReflectionUtils.getNMSClass("world.inventory", "Containers") : null;
-        ENTITY_PLAYER = ReflectionUtils.getNMSClass("server.level", "EntityPlayer");
-        CONTAINER = ReflectionUtils.getNMSClass("world.inventory", "Container");
-        I_CHAT_MUTABLE_COMPONENT = SUPPORTS_19 ? ReflectionUtils.getNMSClass("network.chat", "IChatMutableComponent") : null;
+        CONTAINERS = useContainers() ? XReflection.getNMSClass("world.inventory", "Containers") : null;
+        ENTITY_PLAYER = XReflection.getNMSClass("server.level", "EntityPlayer");
+        CONTAINER = XReflection.getNMSClass("world.inventory", "Container");
+        I_CHAT_MUTABLE_COMPONENT = SUPPORTS_19 ? XReflection.getNMSClass("network.chat", "IChatMutableComponent") : null;
 
         // Initialize methods.
         getHandle = getMethod(CRAFT_PLAYER, "getHandle", MethodType.methodType(ENTITY_PLAYER));
@@ -100,10 +103,19 @@ public final class TitleUpdater {
                 newTitle = newTitle.substring(0, 32);
             }
 
-            if (ReflectionUtils.supports(20)) {
-                InventoryView open = player.getOpenInventory();
-                if (UNOPENABLES.contains(open.getType().name())) return;
-                open.setTitle(newTitle);
+            if (XReflection.supports(20)) {
+                try {
+                    Object view = player.getOpenInventory();
+                    Method getType = view.getClass().getMethod("getType");
+                    getType.setAccessible(true);
+                    InventoryType inventoryType = (InventoryType) getType.invoke(view);
+                    if (UNOPENABLES.contains(inventoryType.name())) return;
+                    Method setTitle = view.getClass().getMethod("setTitle", String.class);
+                    setTitle.setAccessible(true);
+                    setTitle.invoke(view, newTitle);
+                } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException ex) {
+                    throw new RuntimeException(ex);
+                }
                 return;
             }
 
@@ -113,7 +125,7 @@ public final class TitleUpdater {
 
             // Create new title.
             Object title;
-            if (ReflectionUtils.supports(19)) {
+            if (XReflection.supports(19)) {
                 title = literal.invoke(newTitle);
             } else {
                 title = chatMessage.invoke(newTitle, DUMMY_COLOR_MODIFIERS);
@@ -146,7 +158,7 @@ public final class TitleUpdater {
             if (container == null) return;
 
             // If the container was added in a newer version than the current, return.
-            if (container.getContainerVersion() > ReflectionUtils.MINOR_NUMBER && useContainers()) {
+            if (container.getContainerVersion() > XReflection.MINOR_NUMBER && useContainers()) {
                 PLUGIN.getLogger().warning("This container doesn't work on your current version.");
                 return;
             }
@@ -165,7 +177,7 @@ public final class TitleUpdater {
                     packetPlayOutOpenWindow.invoke(windowId, object, title, size);
 
             // Send packet sync.
-            ReflectionUtils.sendPacketSync(player, packet);
+            MinecraftConnection.sendPacket(player, packet);
 
             // Update inventory.
             player.updateInventory();
@@ -243,7 +255,7 @@ public final class TitleUpdater {
      * @return whether to use containers.
      */
     private static boolean useContainers() {
-        return ReflectionUtils.MINOR_NUMBER > 13;
+        return XReflection.MINOR_NUMBER > 13;
     }
 
     /**
@@ -321,7 +333,7 @@ public final class TitleUpdater {
         public @Nullable Object getObject() {
             try {
                 if (!useContainers()) return getMinecraftName();
-                int version = ReflectionUtils.MINOR_NUMBER;
+                int version = XReflection.MINOR_NUMBER;
                 String name = (version == 14 && this == CARTOGRAPHY_TABLE) ? "CARTOGRAPHY" : name();
                 // Since 1.17, containers go from "a" to "x".
                 if (version > 16) name = String.valueOf(alphabet[ordinal()]);

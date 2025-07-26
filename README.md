@@ -1,4 +1,4 @@
-# RyseInventory 1.8-1.19 ![](https://i.imgur.com/BS3gwxL.png)
+# RyseInventory 1.8-1.21 ![](https://i.imgur.com/BS3gwxL.png)
 
 Inventory System inspired by [SmartInventory](https://github.com/MinusKube/SmartInvs)!
 
@@ -7,10 +7,12 @@ managed easily. Besides, you don't have to worry about the pages, because they a
 things can be done with the inventory. More about this under the
 point [Features](https://github.com/Rysefoxx/RyseInventory#features)
 
-# Discord
-Currently programming a bot for the upcoming RyseInventory Discord bot. You can get more information [here](https://github.com/RyseInventory/RyseInventorySupport)
+# Fork
+This is a fork of the original RyseInventory library.
+I'm doing my best to keep this up-to-date and functional but help is always welcome!
 
-Feel free to join my Discord to stay up to date. [Click here](https://discord.gg/GAnXF7BzKg)
+# Discord
+Feel free to join my Discord to stay up to date. [Click here](https://discord.gg/HvaY4QY)
 
 # Adventure
 If no paper is used, the adventure libraries must be added!
@@ -52,10 +54,10 @@ _In the newer versions you can specify the API in your plugin.yml under Librarie
 ```
 repositories {
     mavenCentral()
-    maven { url "https://s01.oss.sonatype.org/content/groups/public/" }
+    maven { url "https://repo.networkmanager.xyz/repository/maven-public/" }
 }
 dependencies {
-    implementation 'io.github.rysefoxx.inventory:RyseInventory-Plugin:1.6.5'
+    implementation 'io.github.rysefoxx.inventory:RyseInventory-Plugin:1.6.13'
 }
 ```
 
@@ -64,10 +66,10 @@ dependencies {
 ```
 repositories {
     mavenCentral()
-    maven { url = uri("https://s01.oss.sonatype.org/content/groups/public/") }
+    maven { url = uri("https://repo.networkmanager.xyz/repository/maven-public/") }
 }
 dependencies {
-    implementation("io.github.rysefoxx.inventory:RyseInventory-Plugin:1.6.5")
+    implementation("io.github.rysefoxx.inventory:RyseInventory-Plugin:1.6.13")
 }
 ```
 
@@ -77,14 +79,14 @@ dependencies {
 <repositories>
     <repository>
         <id>sonatype</id>
-        <url>"https://s01.oss.sonatype.org/content/groups/public/"</url>
+        <url>https://repo.networkmanager.xyz/repository/maven-public/</url>
     </repository>
 </repositories>
 
 <dependency>
   <groupId>io.github.rysefoxx.inventory</groupId>
   <artifactId>RyseInventory-Plugin</artifactId>
-  <version>1.6.5</version>
+  <version>1.6.13</version>
 </dependency>
 ```
 

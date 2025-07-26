@@ -1,0 +1,13 @@
+group = 'io.github.rysefoxx.inventory.v1_20'
+description = 'RyseInventory-v1_20'
+
+repositories {
+    maven {
+        url = 'https://hub.spigotmc.org/nexus/content/repositories/snapshots/'
+    }
+}
+
+dependencies {
+    implementation project(':api')
+    compileOnly 'org.spigotmc:spigot-api:1.20-R0.1-SNAPSHOT'
+}

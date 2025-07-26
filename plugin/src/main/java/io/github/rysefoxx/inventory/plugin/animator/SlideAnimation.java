@@ -31,13 +31,13 @@ import io.github.rysefoxx.inventory.plugin.content.InventoryContents;
 import io.github.rysefoxx.inventory.plugin.enums.AnimatorDirection;
 import io.github.rysefoxx.inventory.plugin.enums.TimeSetting;
 import io.github.rysefoxx.inventory.plugin.pagination.RyseInventory;
+import io.github.rysefoxx.inventory.plugin.util.GlobalRunnable;
 import io.github.rysefoxx.inventory.plugin.util.SlotUtils;
 import io.github.rysefoxx.inventory.plugin.util.StringConstants;
 import io.github.rysefoxx.inventory.plugin.util.TimeUtils;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.*;
+import space.arim.morepaperlib.scheduling.ScheduledTask;
 
 import javax.annotation.Nonnegative;
 import java.util.*;
@@ -49,7 +49,7 @@ import java.util.*;
 public class SlideAnimation {
 
     private static Plugin plugin;
-    private final List<BukkitTask> task = new ArrayList<>();
+    private final List<ScheduledTask> task = new ArrayList<>();
     private final HashMap<Integer, Integer> timeHandler = new HashMap<>();
     private List<Integer> from = new ArrayList<>();
     private List<Integer> to = new ArrayList<>();
@@ -124,7 +124,47 @@ public class SlideAnimation {
 
             int finalI = i;
 
-            BukkitTask bukkitTask = new BukkitRunnable() {
+            ScheduledTask scheduledTask = new GlobalRunnable(contents.pagination().inventory().getManager().getMorePaperLib().scheduling().globalRegionalScheduler()) {
+                        final int toIndex = to.get(finalI);
+                        final IntelligentItem item = items.get(finalI);
+                        final boolean isTopLeft = direction == AnimatorDirection.DIAGONAL_TOP_LEFT;
+                        int fromIndex = from.get(finalI);
+                        int previousIndex = fromIndex;
+
+                        @Override
+                        public void run() {
+                            if (moreDelay && wait[0] > 0) {
+                                wait[0]--;
+                                return;
+                            }
+
+                            if (this.isTopLeft) {
+                                if (this.fromIndex > this.toIndex) {
+                                    cancel();
+                                    return;
+                                }
+                            } else if (this.fromIndex < this.toIndex) {
+                                cancel();
+                                return;
+                            }
+
+                            if (this.fromIndex != from.get(finalI)) {
+                                contents.removeItemWithConsumer(this.previousIndex);
+                            }
+
+                            contents.set(this.fromIndex, this.item);
+                            contents.update(this.fromIndex, this.item);
+
+                            this.previousIndex = this.fromIndex;
+                            if (this.isTopLeft) {
+                                this.fromIndex += 10;
+                                return;
+                            }
+                            this.fromIndex -= 8;
+                        }
+                    }.runAtFixedRate(this.delay, this.period);
+
+            /*BukkitTask bukkitTask = new BukkitRunnable() {
                 final int toIndex = to.get(finalI);
                 final IntelligentItem item = items.get(finalI);
                 final boolean isTopLeft = direction == AnimatorDirection.DIAGONAL_TOP_LEFT;
@@ -162,8 +202,8 @@ public class SlideAnimation {
                     }
                     this.fromIndex -= 8;
                 }
-            }.runTaskTimer(plugin, this.delay, this.period);
-            this.task.add(bukkitTask);
+            }.runTaskTimer(plugin, this.delay, this.period);*/
+            this.task.add(scheduledTask);
         }
     }
 
@@ -182,7 +222,7 @@ public class SlideAnimation {
 
             int finalI = i;
 
-            BukkitTask bukkitTask = new BukkitRunnable() {
+            ScheduledTask scheduledTask = new GlobalRunnable(contents.pagination().inventory().getManager().getMorePaperLib().scheduling().globalRegionalScheduler()) {
                 final int toIndex = to.get(finalI);
                 final IntelligentItem item = items.get(finalI);
                 final boolean isTopRight = direction == AnimatorDirection.DIAGONAL_TOP_RIGHT;
@@ -219,8 +259,47 @@ public class SlideAnimation {
                     }
                     this.fromIndex -= 10;
                 }
-            }.runTaskTimer(plugin, this.delay, this.period);
-            this.task.add(bukkitTask);
+            }.runAtFixedRate(this.delay, this.period);
+
+            /*BukkitTask bukkitTask = new BukkitRunnable() {
+                final int toIndex = to.get(finalI);
+                final IntelligentItem item = items.get(finalI);
+                final boolean isTopRight = direction == AnimatorDirection.DIAGONAL_TOP_RIGHT;
+                int fromIndex = from.get(finalI);
+                int previousIndex = fromIndex;
+
+                @Override
+                public void run() {
+                    if (moreDelay && wait[0] > 0) {
+                        wait[0]--;
+                        return;
+                    }
+
+                    if (this.isTopRight) {
+                        if (this.fromIndex > this.toIndex) {
+                            cancel();
+                            return;
+                        }
+                    } else if (this.fromIndex < this.toIndex) {
+                        cancel();
+                        return;
+                    }
+
+                    if (this.fromIndex != from.get(finalI))
+                        contents.removeItemWithConsumer(this.previousIndex);
+
+                    contents.set(this.fromIndex, this.item);
+                    contents.update(this.fromIndex, this.item);
+
+                    this.previousIndex = this.fromIndex;
+                    if (this.isTopRight) {
+                        this.fromIndex += 8;
+                        return;
+                    }
+                    this.fromIndex -= 10;
+                }
+            }.runTaskTimer(plugin, this.delay, this.period);*/
+            this.task.add(scheduledTask);
         }
     }
 
@@ -238,7 +317,8 @@ public class SlideAnimation {
             }
 
             int finalI = i;
-            BukkitTask bukkitTask = new BukkitRunnable() {
+
+            ScheduledTask scheduledTask = new GlobalRunnable(contents.pagination().inventory().getManager().getMorePaperLib().scheduling().globalRegionalScheduler()) {
                 final int toIndex = to.get(finalI);
                 final IntelligentItem item = items.get(finalI);
                 final boolean leftToRight = direction == AnimatorDirection.HORIZONTAL_LEFT_RIGHT;
@@ -276,8 +356,48 @@ public class SlideAnimation {
                     this.fromIndex--;
 
                 }
-            }.runTaskTimer(plugin, this.delay, this.period);
-            this.task.add(bukkitTask);
+            }.runAtFixedRate(this.delay, this.period);
+
+            /*BukkitTask bukkitTask = new BukkitRunnable() {
+                final int toIndex = to.get(finalI);
+                final IntelligentItem item = items.get(finalI);
+                final boolean leftToRight = direction == AnimatorDirection.HORIZONTAL_LEFT_RIGHT;
+                int fromIndex = from.get(finalI);
+                int previousIndex = fromIndex;
+
+                @Override
+                public void run() {
+                    if (moreDelay && wait[0] > 0) {
+                        wait[0]--;
+                        return;
+                    }
+
+                    if (this.leftToRight) {
+                        if (this.fromIndex > this.toIndex) {
+                            cancel();
+                            return;
+                        }
+                    } else if (this.fromIndex < this.toIndex) {
+                        cancel();
+                        return;
+                    }
+
+                    if (this.fromIndex != from.get(finalI))
+                        contents.removeItemWithConsumer(this.previousIndex);
+
+                    contents.set(this.fromIndex, this.item);
+                    contents.update(this.fromIndex, this.item);
+
+                    this.previousIndex = this.fromIndex;
+                    if (this.leftToRight) {
+                        this.fromIndex++;
+                        return;
+                    }
+                    this.fromIndex--;
+
+                }
+            }.runTaskTimer(plugin, this.delay, this.period);*/
+            this.task.add(scheduledTask);
         }
     }
 
@@ -296,7 +416,7 @@ public class SlideAnimation {
 
             int finalI = i;
 
-            BukkitTask bukkitTask = new BukkitRunnable() {
+            ScheduledTask scheduledTask = new GlobalRunnable(contents.pagination().inventory().getManager().getMorePaperLib().scheduling().globalRegionalScheduler()) {
                 final int toIndex = to.get(finalI);
                 final IntelligentItem item = items.get(finalI);
                 final boolean upToDown = direction == AnimatorDirection.VERTICAL_UP_DOWN;
@@ -335,8 +455,49 @@ public class SlideAnimation {
                     this.fromIndex -= 9;
 
                 }
-            }.runTaskTimer(plugin, this.delay, this.period);
-            this.task.add(bukkitTask);
+            }.runAtFixedRate(this.delay, this.period);
+
+            /*BukkitTask bukkitTask = new BukkitRunnable() {
+                final int toIndex = to.get(finalI);
+                final IntelligentItem item = items.get(finalI);
+                final boolean upToDown = direction == AnimatorDirection.VERTICAL_UP_DOWN;
+                int fromIndex = from.get(finalI);
+                int previousIndex = fromIndex;
+
+                @Override
+                public void run() {
+                    if (moreDelay && wait[0] > 0) {
+                        wait[0]--;
+                        return;
+                    }
+
+                    if (this.upToDown) {
+                        if (this.fromIndex > this.toIndex) {
+                            cancel();
+                            return;
+                        }
+                    } else if (this.fromIndex < this.toIndex) {
+                        cancel();
+                        return;
+                    }
+
+                    if (this.fromIndex != from.get(finalI)) {
+                        contents.removeItemWithConsumer(this.previousIndex);
+                    }
+
+                    contents.set(this.fromIndex, this.item);
+                    contents.update(this.fromIndex, this.item);
+
+                    this.previousIndex = this.fromIndex;
+                    if (this.upToDown) {
+                        this.fromIndex += 9;
+                        return;
+                    }
+                    this.fromIndex -= 9;
+
+                }
+            }.runTaskTimer(plugin, this.delay, this.period);*/
+            this.task.add(scheduledTask);
         }
     }
 
@@ -403,7 +564,7 @@ public class SlideAnimation {
      */
     @ApiStatus.Internal
     @Unmodifiable
-    public @NotNull List<BukkitTask> getTasks() throws UnsupportedOperationException {
+    public @NotNull List<ScheduledTask> getTasks() throws UnsupportedOperationException {
         return Collections.unmodifiableList(this.task);
     }
 
