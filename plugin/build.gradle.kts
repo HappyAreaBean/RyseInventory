@@ -41,10 +41,10 @@ publishing {
             version = "${project.version}"
 
             pom {
-                name = "RyseInventory"
+                name.set("RyseInventory")
                 packaging = "jar"
-                description = "Inventory System"
-                url = "https://github.com/Rysefoxx/RyseInventory"
+                description.set("Inventory System")
+                url.set("https://github.com/Rysefoxx/RyseInventory")
             }
             project.extensions.configure<com.github.jengelman.gradle.plugins.shadow.ShadowExtension>() {
                 component(this@create)
@@ -64,8 +64,8 @@ publishing {
             name = "frsRepositorySnapShots"
             url = uri("https://repo.fantasyrealms.net/other-snapshots")
             credentials {
-                username = project.property("NEXUS_USERNAME").toString()
-                password = project.property("NEXUS_PASSWORD").toString()
+                username = findProperty("frsRepositoryUsername").toString()
+                password = findProperty("frsRepositoryPassword").toString()
             }
         }
     }

@@ -3,7 +3,7 @@ description = 'RyseInventory-v1_16'
 
 repositories {
     maven {
-        url = 'https://papermc.io/repo/repository/maven-public/'
+        url = 'https://repo.papermc.io/repository/maven-public/'
     }
 }
 
