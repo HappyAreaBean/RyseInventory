@@ -1,5 +1,0 @@
-name: RyseInventory
-version: '${project.version}'
-main: io.github.rysefoxx.inventory.plugin.RyseInventoryPlugin
-authors: [ Rysefoxx ]
-description: Inventory System
